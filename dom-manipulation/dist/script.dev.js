@@ -288,7 +288,19 @@ function _arrayWithoutHoles(arr) { if (Array.isArray(arr)) { for (var i = 0, arr
 //     conflictingQuote.text = "Updated text on the server";
 //     notifyUserOfConflict();
 // }
-var quotes = [];
+var quotes = [{
+  id: 1,
+  text: "Everything you've ever wanted is sitting on the other side of fear",
+  category: "Motivational"
+}, {
+  id: 2,
+  text: "Technology will never replace great teachers but technology in the hands of great teachers is transformational.",
+  category: "Technological"
+}, {
+  id: 3,
+  text: "It takes courage to grow up and become who you really are.",
+  category: "Inspirational"
+}];
 
 function displayQuotes(quotesArray) {
   var quoteDisplay = document.getElementById('quoteDisplay');
@@ -306,9 +318,12 @@ function displayQuotes(quotesArray) {
 function populateCategories() {
   var categories = _toConsumableArray(new Set(quotes.map(function (quote) {
     return quote.category;
-  })));
+  }))); // Extract unique categories
+
 
   var categoryFilter = document.getElementById('categoryFilter');
+  categoryFilter.innerHTML = '<option value="all">All</option>'; // Add 'All' option
+
   categories.forEach(function (category) {
     var option = document.createElement('option');
     option.value = category;
@@ -358,6 +373,17 @@ function loadQuotes() {
   }
 }
 
+function notifyUserOfConflict(localQuote, serverQuote) {
+  var conflictMessage = "Conflict detected for quote with ID ".concat(localQuote.id, ":\n    Local: \"").concat(localQuote.text, "\" - ").concat(localQuote.category, "\n    Server: \"").concat(serverQuote.text, "\" - ").concat(serverQuote.category, "\n    Please resolve the conflict manually.");
+
+  if (confirm(conflictMessage + "\n\nClick OK to use the server version, Cancel to keep the local version.")) {
+    Object.assign(localQuote, serverQuote);
+  }
+
+  saveQuotes();
+  displayQuotes(quotes);
+}
+
 var serverURL = 'https://jsonplaceholder.typicode.com/posts';
 
 function fetchQuotesFromServer() {
@@ -386,7 +412,13 @@ function fetchQuotesFromServer() {
 
         case 8:
           data = _context.sent;
-          return _context.abrupt("return", data);
+          return _context.abrupt("return", data.map(function (item) {
+            return {
+              id: item.id,
+              text: item.title,
+              category: 'Server'
+            };
+          }));
 
         case 12:
           _context.prev = 12;
@@ -412,26 +444,27 @@ function syncWithServer() {
 
         case 2:
           serverData = _context2.sent;
-          serverData.forEach(function (serverQuote) {
-            var localQuoteIndex = quotes.findIndex(function (quote) {
-              return quote.id === serverQuote.id;
-            });
 
-            if (localQuoteIndex !== -1) {
-              if (quotes[localQuoteIndex].text !== serverQuote.text) {
-                // Conflict detected
-                notifyUserOfConflict(quotes[localQuoteIndex], serverQuote);
+          if (serverData) {
+            serverData.forEach(function (serverQuote) {
+              var localQuoteIndex = quotes.findIndex(function (quote) {
+                return quote.id === serverQuote.id;
+              });
+
+              if (localQuoteIndex !== -1) {
+                if (quotes[localQuoteIndex].text !== serverQuote.text || quotes[localQuoteIndex].category !== serverQuote.category) {
+                  notifyUserOfConflict(quotes[localQuoteIndex], serverQuote);
+                }
               } else {
-                quotes[localQuoteIndex] = serverQuote;
+                quotes.push(serverQuote);
               }
-            } else {
-              quotes.push(serverQuote);
-            }
-          });
-          saveQuotes();
-          alert("Data synced with the server successfully.");
+            });
+            saveQuotes();
+            displayQuotes(quotes);
+            alert("Data synced with the server successfully.");
+          }
 
-        case 6:
+        case 4:
         case "end":
           return _context2.stop();
       }
@@ -439,23 +472,23 @@ function syncWithServer() {
   });
 }
 
-setInterval(syncWithServer, 60000);
-
-function notifyUserOfConflict(localQuote, serverQuote) {
-  // Display a notification to the user about the conflict
-  alert("Conflict detected for quote: \"".concat(localQuote.text, "\". Click to resolve."));
-}
-
-function handleConflictManually(conflictingQuote) {
-  // Implement manual conflict resolution logic here
-  // For example, you can prompt the user to choose which version to keep
-  // and update the local data accordingly
-  conflictingQuote.text = "User-selected text";
-  saveQuotes();
-}
-
 function simulateConflict() {
   var conflictingQuote = quotes[0];
   conflictingQuote.text = "Updated text on the server";
-  notifyUserOfConflict(conflictingQuote, conflictingQuote);
+  notifyUserOfConflict(conflictingQuote, {
+    id: conflictingQuote.id,
+    text: "Updated text on the server",
+    category: conflictingQuote.category
+  });
 }
+
+setInterval(syncWithServer, 60000);
+loadQuotes();
+var savedCategory = localStorage.getItem('selectedCategory');
+
+if (savedCategory) {
+  document.getElementById('categoryFilter').value = savedCategory;
+}
+
+populateCategories();
+displayQuotes(quotes);

@@ -354,7 +354,11 @@
 //     notifyUserOfConflict();
 // }
 
-let quotes = [];
+let quotes = [
+    { id: 1, text: "Everything you've ever wanted is sitting on the other side of fear", category: "Motivational" },
+    { id: 2, text: "Technology will never replace great teachers but technology in the hands of great teachers is transformational.", category: "Technological" },
+    { id: 3, text: "It takes courage to grow up and become who you really are.", category: "Inspirational" }
+];
 
 function displayQuotes(quotesArray) {
     const quoteDisplay = document.getElementById('quoteDisplay');
@@ -369,8 +373,9 @@ function displayQuotes(quotesArray) {
 }
 
 function populateCategories() {
-    const categories = [...new Set(quotes.map(quote => quote.category))];
+    const categories = [...new Set(quotes.map(quote => quote.category))]; // Extract unique categories
     const categoryFilter = document.getElementById('categoryFilter');
+    categoryFilter.innerHTML = '<option value="all">All</option>'; // Add 'All' option
     categories.forEach(category => {
         const option = document.createElement('option');
         option.value = category;
@@ -382,7 +387,6 @@ function populateCategories() {
 function filterQuotes() {
     const selectedCategory = document.getElementById('categoryFilter').value;
     const filteredQuotes = selectedCategory === 'all' ? quotes : quotes.filter(quote => quote.category === selectedCategory);
-    
     displayQuotes(filteredQuotes);
     localStorage.setItem('selectedCategory', selectedCategory);
 }
@@ -414,6 +418,20 @@ function loadQuotes() {
     }
 }
 
+function notifyUserOfConflict(localQuote, serverQuote) {
+    const conflictMessage = `Conflict detected for quote with ID ${localQuote.id}:
+    Local: "${localQuote.text}" - ${localQuote.category}
+    Server: "${serverQuote.text}" - ${serverQuote.category}
+    Please resolve the conflict manually.`;
+    
+    if (confirm(conflictMessage + "\n\nClick OK to use the server version, Cancel to keep the local version.")) {
+      
+        Object.assign(localQuote, serverQuote);
+    }
+    saveQuotes();
+    displayQuotes(quotes);
+}
+
 const serverURL = 'https://jsonplaceholder.typicode.com/posts';
 
 async function fetchQuotesFromServer() {
@@ -423,7 +441,11 @@ async function fetchQuotesFromServer() {
             throw new Error('Failed to fetch data from the server');
         }
         const data = await response.json();
-        return data;
+        return data.map(item => ({
+            id: item.id,
+            text: item.title,
+            category: 'Server'  
+        }));
     } catch (error) {
         console.error(error);
     }
@@ -431,44 +453,35 @@ async function fetchQuotesFromServer() {
 
 async function syncWithServer() {
     const serverData = await fetchQuotesFromServer();
-    
-    serverData.forEach(serverQuote => {
-        const localQuoteIndex = quotes.findIndex(quote => quote.id === serverQuote.id);
-        if (localQuoteIndex !== -1) {
-            if (quotes[localQuoteIndex].text !== serverQuote.text) {
-                // Conflict detected
-                notifyUserOfConflict(quotes[localQuoteIndex], serverQuote);
+    if (serverData) {
+        serverData.forEach(serverQuote => {
+            const localQuoteIndex = quotes.findIndex(quote => quote.id === serverQuote.id);
+            if (localQuoteIndex !== -1) {
+                if (quotes[localQuoteIndex].text !== serverQuote.text || quotes[localQuoteIndex].category !== serverQuote.category) {
+                    notifyUserOfConflict(quotes[localQuoteIndex], serverQuote);
+                }
             } else {
-                quotes[localQuoteIndex] = serverQuote;
+                quotes.push(serverQuote);
             }
-        } else {
-            quotes.push(serverQuote);
-        }
-    });
-
-    saveQuotes();
-    
-    alert("Data synced with the server successfully.");
-}
-
-setInterval(syncWithServer, 60000); 
-
-function notifyUserOfConflict(localQuote, serverQuote) {
-    // Display a notification to the user about the conflict
-    alert(`Conflict detected for quote: "${localQuote.text}". Click to resolve.`);
-}
-
-function handleConflictManually(conflictingQuote) {
-    // Implement manual conflict resolution logic here
-    // For example, you can prompt the user to choose which version to keep
-    // and update the local data accordingly
-    conflictingQuote.text = "User-selected text";
-    saveQuotes();
+        });
+        saveQuotes();
+        displayQuotes(quotes);
+        alert("Data synced with the server successfully.");
+    }
 }
 
 function simulateConflict() {
     const conflictingQuote = quotes[0];
     conflictingQuote.text = "Updated text on the server";
-
-    notifyUserOfConflict(conflictingQuote, conflictingQuote);
+    notifyUserOfConflict(conflictingQuote, { id: conflictingQuote.id, text: "Updated text on the server", category: conflictingQuote.category });
 }
+
+setInterval(syncWithServer, 60000);
+
+loadQuotes();
+const savedCategory = localStorage.getItem('selectedCategory');
+if (savedCategory) {
+    document.getElementById('categoryFilter').value = savedCategory;
+}
+populateCategories();
+displayQuotes(quotes);
