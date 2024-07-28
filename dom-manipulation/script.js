@@ -354,7 +354,58 @@
 //     notifyUserOfConflict();
 // }
 
-let quotes = []; 
+let quotes = [];
+
+function displayQuotes(quotesArray) {
+    const quoteDisplay = document.getElementById('quoteDisplay');
+    if (quoteDisplay) {
+        quoteDisplay.innerHTML = '';
+        quotesArray.forEach(quote => {
+            const quoteElement = document.createElement('p');
+            quoteElement.innerHTML = `<strong>${quote.text}</strong> - ${quote.category}`;
+            quoteDisplay.appendChild(quoteElement);
+        });
+    }
+}
+
+function populateCategories() {
+    const categories = [...new Set(quotes.map(quote => quote.category))];
+    const categoryFilter = document.getElementById('categoryFilter');
+    categories.forEach(category => {
+        const option = document.createElement('option');
+        option.value = category;
+        option.textContent = category;
+        categoryFilter.appendChild(option);
+    });
+}
+
+function filterQuotes() {
+    const selectedCategory = document.getElementById('categoryFilter').value;
+    const filteredQuotes = selectedCategory === 'all' ? quotes : quotes.filter(quote => quote.category === selectedCategory);
+    
+    displayQuotes(filteredQuotes);
+    localStorage.setItem('selectedCategory', selectedCategory);
+}
+
+function addQuote() {
+    const newQuoteText = document.getElementById('newQuoteText').value;
+    const newQuoteCategory = document.getElementById('newQuoteCategory').value;
+
+    if (newQuoteText && newQuoteCategory) {
+        const newId = quotes.length > 0 ? quotes[quotes.length - 1].id + 1 : 1;
+        const newQuote = { id: newId, text: newQuoteText, category: newQuoteCategory };
+        quotes.push(newQuote);
+        saveQuotes();
+        populateCategories();
+        alert("New quote added successfully!");
+    } else {
+        alert("Please enter both the quote and the category.");
+    }
+}
+
+function saveQuotes() {
+    localStorage.setItem('quotes', JSON.stringify(quotes));
+}
 
 function loadQuotes() {
     const storedQuotes = localStorage.getItem('quotes');
@@ -363,98 +414,61 @@ function loadQuotes() {
     }
 }
 
-function saveQuotes() {
-    localStorage.setItem('quotes', JSON.stringify(quotes));
-}
+const serverURL = 'https://jsonplaceholder.typicode.com/posts';
 
-function showRandomQuote() {
-    if (quotes.length === 0) return; 
-
-    const randomIndex = Math.floor(Math.random() * quotes.length);
-    const randomQuote = quotes[randomIndex];
-
-    const quoteDisplay = document.getElementById('quoteDisplay');
-
-    if (quoteDisplay) {
-        quoteDisplay.innerHTML = `<p><strong>${randomQuote.text}</strong> - ${randomQuote.category}</p>`;
-    }
-}
-
-function addQuote() {
-    const newQuoteText = document.getElementById('newQuoteText').value;
-    const newQuoteCategory = document.getElementById('newQuoteCategory').value;
-
-    if (newQuoteText && newQuoteCategory) {
-        const newQuote = { text: newQuoteText, category: newQuoteCategory };
-        quotes.push(newQuote);
-        saveQuotes();
-        showRandomQuote();
-        alert("Quote added successfully");
-    } else {
-        alert("Please enter both the quote and the category.");
-    }
-}
-
-function createAddQuoteForm() {
-    const formContainer = document.createElement('div');
-    formContainer.innerHTML = `
-        <input id="newQuoteText" type="text" placeholder="Enter a new quote"/>
-        <input id="newQuoteCategory" type="text" placeholder="Enter a new category"/>
-        <button id="addQuoteBtn">Add Quote</button>
-    `;
-
-    document.body.appendChild(formContainer);
-
-    const addQuoteBtn = document.getElementById('addQuoteBtn');
-    if (addQuoteBtn) {
-        addQuoteBtn.addEventListener('click', addQuote);
-    }
-}
-
-const newQuoteBtn = document.getElementById('newQuoteBtn');
-if (newQuoteBtn) {
-    newQuoteBtn.addEventListener('click', createAddQuoteForm);
-}
-
-function exportToJson() {
-    const quotesJson = JSON.stringify(quotes, null, 2);
-    const blob = new Blob([quotesJson], { type: 'application/json' });
-    const url = URL.createObjectURL(blob);
-
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = 'quotes.json';
-    document.body.appendChild(a);
-    a.click();
-    window.URL.revokeObjectURL(url);
-    document.body.removeChild(a); 
-}
-
-function importFromJsonFile(event) {
-    const fileReader = new FileReader();
-    fileReader.onload = function(event) {
-        try {
-            const importedQuotes = JSON.parse(event.target.result);
-            quotes.push(...importedQuotes);
-            saveQuotes();
-            showRandomQuote();
-            alert('Quotes imported successfully!');
-        } catch (e) {
-            alert('Failed to import quotes: Invalid JSON');
+async function fetchQuotesFromServer() {
+    try {
+        const response = await fetch(serverURL);
+        if (!response.ok) {
+            throw new Error('Failed to fetch data from the server');
         }
-    };
-    fileReader.readAsText(event.target.files[0]);
+        const data = await response.json();
+        return data;
+    } catch (error) {
+        console.error(error);
+    }
 }
 
-const importFileInput = document.getElementById('importFile');
-if (importFileInput) {
-    importFileInput.addEventListener('change', importFromJsonFile);
+async function syncWithServer() {
+    const serverData = await fetchQuotesFromServer();
+    
+    serverData.forEach(serverQuote => {
+        const localQuoteIndex = quotes.findIndex(quote => quote.id === serverQuote.id);
+        if (localQuoteIndex !== -1) {
+            if (quotes[localQuoteIndex].text !== serverQuote.text) {
+                // Conflict detected
+                notifyUserOfConflict(quotes[localQuoteIndex], serverQuote);
+            } else {
+                quotes[localQuoteIndex] = serverQuote;
+            }
+        } else {
+            quotes.push(serverQuote);
+        }
+    });
+
+    saveQuotes();
+    
+    alert("Data synced with the server successfully.");
 }
 
-const exportBtn = document.getElementById('exportBtn');
-if (exportBtn) {
-    exportBtn.addEventListener('click', exportToJson);
+setInterval(syncWithServer, 60000); 
+
+function notifyUserOfConflict(localQuote, serverQuote) {
+    // Display a notification to the user about the conflict
+    alert(`Conflict detected for quote: "${localQuote.text}". Click to resolve.`);
 }
 
-loadQuotes();
-showRandomQuote();
+function handleConflictManually(conflictingQuote) {
+    // Implement manual conflict resolution logic here
+    // For example, you can prompt the user to choose which version to keep
+    // and update the local data accordingly
+    conflictingQuote.text = "User-selected text";
+    saveQuotes();
+}
+
+function simulateConflict() {
+    const conflictingQuote = quotes[0];
+    conflictingQuote.text = "Updated text on the server";
+
+    notifyUserOfConflict(conflictingQuote, conflictingQuote);
+}
