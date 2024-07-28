@@ -532,7 +532,7 @@ async function addQuote() {
         const newId = quotes.length > 0 ? quotes[quotes.length - 1].id + 1 : 1;
         const newQuote = { id: newId, text: newQuoteText, category: newQuoteCategory };
         
-        // Post new quote to server
+      
         try {
             const response = await fetch(serverURL, {
                 method: 'POST',
@@ -577,7 +577,7 @@ function notifyUserOfConflict(localQuote, serverQuote) {
     Please resolve the conflict manually.`;
     
     if (confirm(conflictMessage + "\n\nClick OK to use the server version, Cancel to keep the local version.")) {
-        // Use server version
+       
         Object.assign(localQuote, serverQuote);
     }
     saveQuotes();
@@ -596,14 +596,14 @@ async function fetchQuotesFromServer() {
         return data.map(item => ({
             id: item.id,
             text: item.title,
-            category: 'Server'  // Assume a generic category for server quotes
+            category: 'Server'  
         }));
     } catch (error) {
         console.error(error);
     }
 }
 
-async function syncWithServer() {
+async function syncQuotes() {
     const serverData = await fetchQuotesFromServer();
     if (serverData) {
         serverData.forEach(serverQuote => {
@@ -628,7 +628,7 @@ function simulateConflict() {
     notifyUserOfConflict(conflictingQuote, { id: conflictingQuote.id, text: "Updated text on the server", category: conflictingQuote.category });
 }
 
-setInterval(syncWithServer, 60000);
+setInterval(syncQuotes, 60000);
 
 loadQuotes();
 const savedCategory = localStorage.getItem('selectedCategory');
