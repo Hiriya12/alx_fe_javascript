@@ -1,4 +1,4 @@
-document.addEventListener("keydown", function(){
+document.addEventListener('DOMContentLoaded', function(){
     let quotes = [
     {text:"Everything you've ever wanted is sitting on the other side of fear", category:"Motivational" },
     {text:"Technology will never replace great teachers but technology in the hands of great teachers is transformational.", category:"Technological"},
