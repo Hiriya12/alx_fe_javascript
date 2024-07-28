@@ -223,12 +223,15 @@
 // populateCategories();
 // displayQuotes(quotes);
 
+//3
+
 
 let quotes = [
     { id: 1, text: "Everything you've ever wanted is sitting on the other side of fear", category: "Motivational" },
     { id: 2, text: "Technology will never replace great teachers but technology in the hands of great teachers is transformational.", category: "Technological" },
     { id: 3, text: "It takes courage to grow up and become who you really are.", category: "Inspirational" }
 ];
+
 function displayQuotes(quotesArray) {
     const quoteDisplay = document.getElementById('quoteDisplay');
     if (quoteDisplay) {
@@ -242,7 +245,8 @@ function displayQuotes(quotesArray) {
 }
 
 function populateCategories() {
-    const categories = [...new Set(quotes.map(quote => quote.category))]; 
+    const categories = [...new Set(quotes.map(quote => quote.category))]; // Extract unique categories
+
     const categoryFilter = document.getElementById('categoryFilter');
     categories.forEach(category => {
         const option = document.createElement('option');
@@ -298,7 +302,7 @@ displayQuotes(quotes);
 
 const serverURL = 'https://jsonplaceholder.typicode.com/posts';
 
-async function fetchDataFromServer() {
+async function fetchQuotesFromServer() {
     try {
         const response = await fetch(serverURL);
         if (!response.ok) {
@@ -312,9 +316,9 @@ async function fetchDataFromServer() {
 }
 
 async function syncWithServer() {
-    const serverData = await fetchDataFromServer();
+    const serverData = await fetchQuotesFromServer();
     
-     serverData.forEach(serverQuote => {
+   serverData.forEach(serverQuote => {
         const localQuoteIndex = quotes.findIndex(quote => quote.id === serverQuote.id);
         if (localQuoteIndex !== -1) {
             quotes[localQuoteIndex] = serverQuote;
@@ -323,7 +327,7 @@ async function syncWithServer() {
         }
     });
 
-     saveQuotes();
+    saveQuotes();
     
     alert("Data synced with the server successfully.");
 }
@@ -331,13 +335,21 @@ async function syncWithServer() {
 setInterval(syncWithServer, 60000); 
 
 function handleConflictManually() {
-   function notifyUserOfConflict() {
-     alert("Data conflict detected. Click to resolve.");
+    
 }
 
+
+function notifyUserOfConflict() {
+    
+    alert("Data conflict detected. Click to resolve.");
+}
+
+functionHere is the continuation of the `script.js` file with the `fetchQuotesFromServer` function integrated into the existing code:
+
+
 function simulateConflict() {
-      const conflictingQuote = quotes[0];
+    const conflictingQuote = quotes[0];
     conflictingQuote.text = "Updated text on the server";
 
-      notifyUserOfConflict();
+    notifyUserOfConflict();
 }
