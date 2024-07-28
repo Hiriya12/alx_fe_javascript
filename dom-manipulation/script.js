@@ -506,10 +506,9 @@ function displayQuotes(quotesArray) {
 }
 
 function populateCategories() {
-    const categories = [...new Set(quotes.map(quote => quote.category))]; // Extract unique categories
+    const categories = [...new Set(quotes.map(quote => quote.category))]; 
     const categoryFilter = document.getElementById('categoryFilter');
-    categoryFilter.innerHTML = '<option value="all">All</option>'; // Add 'All' option
-    categories.forEach(category => {
+    categoryFilter.innerHTML = '<option value="all">All</option>'; 
         const option = document.createElement('option');
         option.value = category;
         option.textContent = category;
@@ -532,7 +531,6 @@ async function addQuote() {
         const newId = quotes.length > 0 ? quotes[quotes.length - 1].id + 1 : 1;
         const newQuote = { id: newId, text: newQuoteText, category: newQuoteCategory };
         
-      
         try {
             const response = await fetch(serverURL, {
                 method: 'POST',
@@ -577,7 +575,7 @@ function notifyUserOfConflict(localQuote, serverQuote) {
     Please resolve the conflict manually.`;
     
     if (confirm(conflictMessage + "\n\nClick OK to use the server version, Cancel to keep the local version.")) {
-       
+      
         Object.assign(localQuote, serverQuote);
     }
     saveQuotes();
@@ -618,7 +616,7 @@ async function syncQuotes() {
         });
         saveQuotes();
         displayQuotes(quotes);
-        alert("Data synced with the server successfully.");
+        alert("Quotes synced with server!");
     }
 }
 
